@@ -13,7 +13,6 @@ module.exports = async (req, res) => {
         response.on("end", () => {
           const buffer = Buffer.concat(chunks);
 
-          
           const encoding = response.headers["content-encoding"];
           try {
             if (encoding === "gzip") {
@@ -38,12 +37,13 @@ module.exports = async (req, res) => {
       request.on("error", reject);
     });
 
-  const { type } = Object.fromEntries(
-    new URL(req.url, "http://localhost").searchParams
-  );
+  // ?type=sms | numbers
+  const urlObj = new URL(req.url, "http://localhost");
+  const type = urlObj.searchParams.get("type");
 
   if (!type) {
     res.statusCode = 400;
+    res.setHeader("Content-Type", "application/json");
     return res.end(JSON.stringify({ error: "Missing ?type parameter" }));
   }
 
@@ -54,7 +54,8 @@ module.exports = async (req, res) => {
     "X-Requested-With": "XMLHttpRequest",
     "Accept-Encoding": "gzip, deflate",
     "Accept-Language": "en-US,en;q=0.9",
-    Cookie: "PHPSESSID=qk55hsbh0hd0otacldrpuagaao",
+    // SECURITY: real value Vercel env variable se lo
+    Cookie: `PHPSESSID=qk55hsbh0hd0otacldrpuagaao}`,
   };
 
   let url;
@@ -71,6 +72,7 @@ module.exports = async (req, res) => {
       "http://51.89.99.105/NumberPanel/client/SMSCDRStats";
   } else {
     res.statusCode = 400;
+    res.setHeader("Content-Type", "application/json");
     return res.end(
       JSON.stringify({ error: "Invalid type (use sms or numbers)" })
     );
@@ -78,10 +80,12 @@ module.exports = async (req, res) => {
 
   try {
     const data = await get(url, headers);
+    res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(data);
   } catch (err) {
     res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ error: "Fetch failed", details: err.message }));
   }
-};
+}; // 👈 yeh closing line zaroori hai
